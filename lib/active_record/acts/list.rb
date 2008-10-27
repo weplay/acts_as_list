@@ -63,8 +63,9 @@ module ActiveRecord
 
             #{scope_condition_method}
 
-            before_destroy :remove_from_list
-            before_create  :add_to_list_bottom
+            before_destroy  :remove_from_list
+            before_create   :add_new_record_to_list
+            after_create    :increment_positions_on_other_items
           EOV
         end
       end
@@ -177,10 +178,16 @@ module ActiveRecord
             increment_positions_on_all_items
           end
 
-          def add_to_list_bottom
-            self[position_column] = bottom_position_in_list.to_i + 1
+          def add_new_record_to_list
+            self[position_column] = 1
           end
 
+          def increment_positions_on_other_items
+             acts_as_list_class.update_all(
+               "#{position_column} = (#{position_column} + 1)", "#{scope_condition} AND id != #{self.id}"
+            )
+          end
+          
           # Overwrite this method to define the scope of the list changes
           def scope_condition() "1" end
 
